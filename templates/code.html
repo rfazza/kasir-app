@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Kasir Sederhana</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .receipt {
+            font-family: 'Lucida Console', monospace;
+            width: 80mm;
+            padding: 10px;
+            margin: 20px auto;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #receipt, #receipt * {
+                visibility: visible;
+            }
+            #receipt {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 80mm;
+                margin: 0;
+                padding: 10px;
+                box-shadow: none;
+            }
+        }
+        .product-item:hover {
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-5">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-2xl font-bold text-center mb-6 text-blue-600">APLIKASI KASIR TOKO</h1>
+        
+        <!-- Tambah Produk Baru -->
+        <div class="mb-4 p-4 bg-purple-50 rounded-lg">
+            <h2 class="text-xl font-semibold mb-3 text-purple-700">Tambah Produk Baru</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <input type="text" id="newProductName" placeholder="Nama Produk" class="p-2 border rounded">
+                <input type="number" id="newProductPrice" placeholder="Harga" class="p-2 border rounded">
+                <button onclick="addNewProduct()" class="bg-purple-600 text-white p-2 rounded hover:bg-purple-700">
+                    Tambah Produk
+                </button>
+                <button onclick="toggleProductDatabase()" class="bg-gray-600 text-white p-2 rounded hover:bg-gray-700">
+                    Lihat Semua Produk
+                </button>
+            </div>
+        </div>
+
+        <!-- Input Transaksi -->
+        <div class="mb-8 p-4 bg-blue-50 rounded-lg">
+            <h2 class="text-xl font-semibold mb-3 text-blue-700">Input Transaksi</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <input type="text" id="itemName" placeholder="Nama Produk" class="p-2 border rounded">
+                <input type="number" id="itemQty" placeholder="Jumlah" class="p-2 border rounded" value="1">
+            </div>
+            <button onclick="findProduct()" class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+                Tambah ke Keranjang
+            </button>
+        </div>
+        
+        <!-- Daftar Produk -->
+        <div class="mb-6 p-4 bg-yellow-50 rounded-lg hidden" id="productDatabase">
+            <h2 class="text-xl font-semibold mb-3 text-blue-700">Database Produk 
+                <button onclick="toggleProductDatabase()" class="float-right text-sm bg-gray-200 px-2 rounded">× Tutup</button>
+            </h2>
+            <div id="productList" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <!-- Produk akan ditampilkan di sini -->
+            </div>
+        </div>
+        
+        <!-- Keranjang Belanja -->
+        <div class="mb-6 p-4 bg-green-50 rounded-lg">
+            <h2 class="text-xl font-semibold mb-3 text-green-700">Keranjang Belanja</h2>
+            <table class="w-full mb-4">
+                <thead>
+                    <tr class="border-b">
+                        <th class="text-left p-2">Produk</th>
+                        <th class="text-right p-2">Harga</th>
+                        <th class="text-right p-2">Qty</th>
+                        <th class="text-right p-2">Total</th>
+                        <th class="text-right p-2">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="cartItems"></tbody>
+                <tfoot>
+                    <tr class="border-t font-bold">
+                        <td colspan="3" class="text-right p-2">Total:</td>
+                        <td id="cartTotal" class="text-right p-2">Rp0</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                <div>
+                    <label class="block mb-1">Uang Dibayar</label>
+                    <input type="number" id="uangDibayar" class="p-2 border rounded w-full" placeholder="Masukkan jumlah uang">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="hitungKembalian()" class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 w-full">Hitung Kembalian</button>
+                </div>
+            </div>
+            <div id="kembalianInfo" class="mt-2 hidden">
+                <p>Kembalian: <span id="jumlahKembalian" class="font-bold">Rp0</span></p>
+            </div>
+            <button onclick="printReceipt()" class="bg-green-600 text-white p-2 rounded hover:bg-green-700 mt-4 w-full">Cetak Struk</button>
+        </div>
+        
+        <!-- Struk Pembelian -->
+        <div id="receipt" class="receipt hidden">
+            <h2 class="text-center font-bold mb-2">STRUK PEMBELIAN</h2>
+            <div id="receiptContent"></div>
+            <hr class="my-2 border-dashed">
+            <div class="flex justify-between font-bold mt-2">
+                <span>Total:</span>
+                <span id="receiptTotal">Rp0</span>
+            </div>
+            <div id="receiptBayar" class="flex justify-between mt-1 hidden">
+                <span>Uang Dibayar:</span>
+                <span id="receiptDibayar">Rp0</span>
+            </div>
+            <div id="receiptKembalian" class="flex justify-between mt-1 hidden">
+                <span>Kembalian:</span>
+                <span id="receiptJmlKembalian">Rp0</span>
+            </div>
+            <hr class="my-2 border-dashed">
+            <div class="text-center mt-4 text-sm">
+                Terima kasih telah berbelanja!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let products = [];
+        let cart = [];
+
+        // Ambil data produk dari API
+        async function loadProducts() {
+            const res = await fetch('/api/products');
+            products = await res.json();
+        }
+
+        async function addNewProduct() {
+            const name = document.getElementById('newProductName').value;
+            const price = parseInt(document.getElementById('newProductPrice').value);
+            if (!name || isNaN(price)) return alert('Isi nama & harga!');
+            await fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, price })
+            });
+            await loadProducts();
+            renderProducts();
+            document.getElementById('newProductName').value = '';
+            document.getElementById('newProductPrice').value = '';
+        }
+
+        function toggleProductDatabase() {
+            const db = document.getElementById('productDatabase');
+            db.classList.toggle('hidden');
+            if (!db.classList.contains('hidden')) renderProducts();
+        }
+
+        function renderProducts() {
+            const productList = document.getElementById('productList');
+            productList.innerHTML = '';
+            products.forEach(product => {
+                const div = document.createElement('div');
+                div.className = 'product-item border p-3 rounded-lg shadow-sm';
+                div.innerHTML = `
+                    <div class="flex justify-between">
+                        <h3 class="font-semibold">${product.name}</h3>
+                        <span>Rp${product.price.toLocaleString()}</span>
+                    </div>
+                    <button onclick="selectProduct(${product.id})" class="mt-2 bg-blue-500 text-white p-1 rounded text-sm hover:bg-blue-600 w-full">Pilih</button>
+                `;
+                productList.appendChild(div);
+            });
+        }
+
+        function selectProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            document.getElementById('itemName').value = product.name;
+            document.getElementById('productDatabase').classList.add('hidden');
+            document.getElementById('itemQty').focus();
+        }
+
+        function findProduct() {
+            const name = document.getElementById('itemName').value;
+            const qty = parseInt(document.getElementById('itemQty').value) || 1;
+            const product = products.find(p => p.name.toLowerCase() === name.toLowerCase());
+            if (!product) return alert('Produk tidak ditemukan!');
+            const existing = cart.find(i => i.id === product.id);
+            if (existing) existing.quantity += qty;
+            else cart.push({ id: product.id, name: product.name, price: product.price, quantity: qty });
+            renderCart();
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemQty').value = 1;
+        }
+
+        function renderCart() {
+            const cartItems = document.getElementById('cartItems');
+            cartItems.innerHTML = '';
+            cart.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b';
+                tr.innerHTML = `
+                    <td class="p-2">${item.name}</td>
+                    <td class="p-2 text-right">Rp${item.price.toLocaleString()}</td>
+                    <td class="p-2 text-right">${item.quantity}</td>
+                    <td class="p-2 text-right">Rp${(item.price * item.quantity).toLocaleString()}</td>
+                    <td class="p-2 text-right">
+                        <button onclick="removeFromCart(${item.id})" class="text-red-500 hover:text-red-700">Hapus</button>
+                    </td>
+                `;
+                cartItems.appendChild(tr);
+            });
+            const total = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+            document.getElementById('cartTotal').textContent = `Rp${total.toLocaleString()}`;
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(i => i.id !== id);
+            renderCart();
+        }
+
+        function hitungKembalian() {
+            const total = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+            const bayar = parseInt(document.getElementById('uangDibayar').value);
+            if (isNaN(bayar) || bayar < total) return alert('Uang kurang!');
+            document.getElementById('jumlahKembalian').textContent = `Rp${(bayar - total).toLocaleString()}`;
+            document.getElementById('kembalianInfo').classList.remove('hidden');
+        }
+
+        async function printReceipt() {
+            if (cart.length === 0) return alert('Keranjang kosong!');
+            const total = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+            for (const item of cart) {
+                await fetch('/api/sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        product_name: item.name,
+                        price: item.price,
+                        quantity: item.quantity,
+                        total: item.price * item.quantity
+                    })
+                });
+            }
+            alert('Transaksi tersimpan!');
+            cart = [];
+            renderCart();
+        }
+
+        document.addEventListener('DOMContentLoaded', loadProducts);
+    </script>
+</body>
+</html>
